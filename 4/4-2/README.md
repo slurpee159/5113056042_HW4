@@ -1,121 +1,205 @@
+# 4-2: Model Optimization using PyCaret and Optuna
 
-# 4-1 Pycarat to compare ML agorithms on classification problem 16 Model 
-Titanic Dataset Classification using PyCaret
+## Overview
 
-This project demonstrates how to use PyCaret for machine learning model comparison on the Titanic dataset. 
-The primary goal is to evaluate and compare the performance of 16 classification models based on various metrics.
+This project focuses on model optimization for a classification problem using **PyCaret**, **Optuna**, and other AutoML or meta-heuristic techniques. The main steps include:
 
-## Features
+1. **Feature Engineering**
+2. **Model Selection**
+3. **Hyperparameter Optimization**
 
-- Automated machine learning model comparison using PyCaret.
-- Includes preprocessing steps for the Titanic dataset (feature selection, encoding, and missing value handling).
-- Outputs the top-performing models ranked by Accuracy, AUC, Recall, Precision, F1 Score, and other metrics.
+We use the Titanic dataset for demonstration, which is preprocessed and evaluated using AutoML tools to optimize performance.
 
-## Installation
+---
 
-To run this program, follow these steps:
+## Question 1
 
-1. Clone the repository.
-    ```bash
-    git clone https://github.com/your-repository/titanic-pycaret-classification.git
-    cd titanic-pycaret-classification
-    ```
+**How do I preprocess the Titanic dataset and automatically select the best classification model using PyCaret?**
 
-2. Create a virtual environment and activate it:
-    ```bash
-    python -m venv .venv
-    # On Windows
-    .venv\Scripts\activate
-    # On macOS/Linux
-    source .venv/bin/activate
-    ```
+### Solution:
 
-3. Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+We preprocess the Titanic dataset by handling missing values, dropping unnecessary columns, and encoding categorical features. Using PyCaret's `setup()` and `compare_models()` functions, we automatically select the best-performing classification model.
 
-## Usage
+#### Code Snippet:
 
-Run the Python script to preprocess the Titanic dataset and compare the performance of 16 classification models:
-```bash
-python 5113056042_HW4.py
+```python
+import pandas as pd
+from pycaret.classification import *
+
+def load_data():
+    # Example: Load the Titanic dataset
+    url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+    data = pd.read_csv(url)
+
+    # Drop columns with too many missing values or irrelevant features
+    data = data.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'], axis=1)
+
+    # Fill missing values
+    data['Age'] = data['Age'].fillna(data['Age'].median())
+    data['Embarked'] = data['Embarked'].fillna(data['Embarked'].mode()[0])
+
+    # Encode categorical variables
+    data = pd.get_dummies(data, columns=['Sex', 'Embarked'], drop_first=True)
+
+    return data
+
+# Step 1: Load data
+data = load_data()
+
+# Step 2: PyCaret Workflow
+s = setup(data=data, target='Survived', session_id=42, normalize=True,
+          feature_selection=True, remove_multicollinearity=True, fold=5, verbose=False)
+
+# Compare models and select the best one
+best_model = compare_models()
+print("Best Model Selected:", best_model)
 ```
 
-## Results
+---
 
-The program compares 16 machine learning models and outputs their performance metrics. Below is a preview of the results:
+## Question 2
 
-![image](https://github.com/user-attachments/assets/cadffded-f4a1-4014-b2cc-1ba65216be8f)
+**How can I optimize the hyperparameters of the selected model using Optuna?**
 
+### Solution:
 
-## License
+We use **Optuna**, a hyperparameter optimization library, to tune the selected model from PyCaret. Optuna creates a custom search space for the model's hyperparameters and optimizes them for maximum performance.
 
-This project is licensed under the MIT License. Feel free to use and modify the code.
+#### Code Snippet:
 
-## Contributing
+```python
+import optuna
+from pycaret.classification import *
 
-If you would like to contribute, feel free to fork the repository and submit a pull request.
+def optuna_optimization(model, setup_instance):
+    def objective(trial):
+        param_grid = {
+            'max_depth': [trial.suggest_int('max_depth', 3, 10)],
+            'n_estimators': [trial.suggest_int('n_estimators', 50, 200)],
+            'learning_rate': [trial.suggest_float('learning_rate', 0.01, 0.3)],
+            'subsample': [trial.suggest_float('subsample', 0.5, 1.0)],
+        }
 
+        try:
+            tuned_model = tune_model(model, custom_grid=param_grid)
+            score = pull().iloc[0]['Accuracy']  # Use accuracy for evaluation
+            return score
+        except Exception as e:
+            print(f"Trial failed: {e}")
+            return 0  # Return a default score for failed trials
 
-# 4-2 HW4-2 對 model optimization using pycarat or optuna or other AutoML,meta-heuristic 1. Feature engineering, 2. model selection , 3 . training 超參數優化
+    study = optuna.create_study(direction='maximize')
+    study.optimize(objective, n_trials=10)
 
-# Project Overview
-This project demonstrates the use of PyCaret and Optuna to optimize machine learning models. The workflow includes feature engineering, model selection, and hyperparameter optimization.
+    return study.best_params
 
-## Key Steps
-1. **Feature Engineering**: Preprocess the Titanic dataset, including handling missing values, removing irrelevant columns, and encoding categorical variables.
-2. **Model Selection**: Use PyCaret to evaluate and select the best model from various classifiers.
-3. **Hyperparameter Optimization**: Use Optuna to fine-tune the selected model's parameters.
-
-## Results
-### Model Comparison
-Based on the PyCaret workflow, the top-performing models were:
-- **Extra Trees Classifier**
-  - Accuracy: 0.7031
-  - AUC: 0.7202
-  - F1 Score: 0.5389
-- **Light Gradient Boosting Machine**
-  - Accuracy: 0.7016
-  - AUC: 0.7316
-  - F1 Score: 0.5697
-- **Random Forest Classifier**
-  - Accuracy: 0.7015
-  - AUC: 0.7421
-  - F1 Score: 0.5662
-
-### Best Parameters from Optuna
-The optimized hyperparameters for the selected model were:
-- `max_depth`: 10
-- `n_estimators`: 60
-- `learning_rate`: 0.227
-- `subsample`: 0.829
-
-## Prerequisites
-### Required Python Libraries
-To run the code, ensure the following libraries are installed:
-
-```bash
-pip install pandas pycaret optuna scikit-learn
+# Step 3: Hyperparameter Optimization
+best_params = optuna_optimization(best_model, s)
+print("Best Parameters from Optuna:", best_params)
 ```
 
-## Usage
-1. Clone the repository or download the script.
-2. Ensure the required libraries are installed.
-3. Run the script:
+---
 
-```bash
-python script_name.py
+## Workflow
+
+### Step 1: Load and Preprocess the Dataset
+- Load the Titanic dataset.
+- Drop irrelevant columns and fill missing values.
+- Encode categorical variables for machine learning.
+
+### Step 2: Model Selection with PyCaret
+- Use PyCaret's `setup()` to prepare the dataset.
+- Automatically compare multiple classification models using `compare_models()`.
+- Select the best-performing model for optimization.
+
+### Step 3: Hyperparameter Optimization with Optuna
+- Define a custom hyperparameter search space for the selected model.
+- Use Optuna to optimize the hyperparameters for maximum performance.
+- Return the best parameters and finalize the optimized model.
+
+### Step 4: Finalize and Save the Model
+- Finalize the model with the optimized parameters.
+- Save the model using PyCaret's `save_model()` function.
+
+---
+
+## Example Output
+
+1. **Best Model Selected**:
+   ```text
+   Best Model Selected: RandomForestClassifier
+   ```
+
+2. **Best Hyperparameters from Optuna**:
+   ```text
+   Best Parameters from Optuna: {'max_depth': 7, 'n_estimators': 150, 'learning_rate': 0.1, 'subsample': 0.8}
+   ```
+
+3. **Final Model Saved**:
+   The model is saved as `optimized_model.pkl` for future use.
+
+---
+
+## Full Code
+
+```python
+import pandas as pd
+from pycaret.classification import *
+import optuna
+
+# Step 1: Load and preprocess data
+def load_data():
+    url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+    data = pd.read_csv(url)
+    data = data.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'], axis=1)
+    data['Age'] = data['Age'].fillna(data['Age'].median())
+    data['Embarked'] = data['Embarked'].fillna(data['Embarked'].mode()[0])
+    data = pd.get_dummies(data, columns=['Sex', 'Embarked'], drop_first=True)
+    return data
+
+def pycaret_workflow(data):
+    s = setup(data=data, target='Survived', session_id=42, normalize=True,
+              feature_selection=True, remove_multicollinearity=True, fold=5, verbose=False)
+    best_model = compare_models()
+    return best_model, s
+
+def optuna_optimization(model, setup_instance):
+    def objective(trial):
+        param_grid = {
+            'max_depth': [trial.suggest_int('max_depth', 3, 10)],
+            'n_estimators': [trial.suggest_int('n_estimators', 50, 200)],
+            'learning_rate': [trial.suggest_float('learning_rate', 0.01, 0.3)],
+            'subsample': [trial.suggest_float('subsample', 0.5, 1.0)],
+        }
+        try:
+            tuned_model = tune_model(model, custom_grid=param_grid)
+            score = pull().iloc[0]['Accuracy']
+            return score
+        except:
+            return 0
+    study = optuna.create_study(direction='maximize')
+    study.optimize(objective, n_trials=10)
+    return study.best_params
+
+if __name__ == "__main__":
+    data = load_data()
+    best_model, s = pycaret_workflow(data)
+    best_params = optuna_optimization(best_model, s)
+    print("Best Parameters from Optuna:", best_params)
+    final_model = finalize_model(best_model)
+    save_model(final_model, 'optimized_model')
 ```
 
-4. The optimized model will be saved as `optimized_model.pkl`.
+---
 
 ## Notes
-- The `setup()` function in PyCaret is used for preprocessing and initializing the modeling environment.
-- Optuna is integrated with PyCaret's `tune_model` to perform efficient hyperparameter optimization.
-- The dataset used is the Titanic dataset, loaded directly from an online source.
+- PyCaret simplifies the comparison of multiple models and feature selection.
+- Optuna provides a powerful framework for hyperparameter tuning.
+- Ensure you have the necessary libraries installed:
+  ```bash
+  pip install pycaret optuna pandas
+  ```
 
-## Troubleshooting
-- Ensure all required libraries are installed.
-- If PyCaret or Optuna raises parameter-related errors, verify the parameter grid aligns with the selected model's supported parameters.
+---
+
 
