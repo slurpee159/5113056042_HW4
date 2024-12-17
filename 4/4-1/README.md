@@ -1,121 +1,198 @@
+# 4-1 Comparing 16 Machine Learning Models using PyCaret on Titanic Dataset
 
-# 4-1 Pycarat to compare ML agorithms on classification problem 16 Model 
-Titanic Dataset Classification using PyCaret
+## Overview
 
-This project demonstrates how to use PyCaret for machine learning model comparison on the Titanic dataset. 
-The primary goal is to evaluate and compare the performance of 16 classification models based on various metrics.
+This project uses PyCaret to compare 16 machine learning classification models on a multi-feature Titanic dataset. PyCaret automates the end-to-end machine learning workflow, allowing efficient model comparison and selection.
 
-## Features
+---
 
-- Automated machine learning model comparison using PyCaret.
-- Includes preprocessing steps for the Titanic dataset (feature selection, encoding, and missing value handling).
-- Outputs the top-performing models ranked by Accuracy, AUC, Recall, Precision, F1 Score, and other metrics.
+## Question 1
 
-## Installation
+**How can I efficiently compare 16 machine learning models for a classification problem using PyCaret?**
 
-To run this program, follow these steps:
+### Solution:
 
-1. Clone the repository.
-    ```bash
-    git clone https://github.com/your-repository/titanic-pycaret-classification.git
-    cd titanic-pycaret-classification
-    ```
+We use PyCaret's `compare_models()` function, which automates the evaluation of multiple machine learning algorithms for a classification task. The Titanic dataset, which includes multiple features, is preprocessed and used as input.
 
-2. Create a virtual environment and activate it:
-    ```bash
-    python -m venv .venv
-    # On Windows
-    .venv\Scripts\activate
-    # On macOS/Linux
-    source .venv/bin/activate
-    ```
+---
 
-3. Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## Question 2
 
-## Usage
+**How do I preprocess the Titanic dataset for use in machine learning models?**
 
-Run the Python script to preprocess the Titanic dataset and compare the performance of 16 classification models:
-```bash
-python 5113056042_HW4.py
+### Solution:
+
+1. Drop unnecessary columns such as `deck`, `embark_town`, and others.
+2. Encode categorical features like `sex` and `embarked`.
+3. Handle missing values by filling them with the median or mode.
+4. Drop rows with any remaining missing values.
+
+The preprocessing ensures the dataset is clean and suitable for PyCaret's automated machine learning pipeline.
+
+---
+
+## Workflow
+
+### Step 1: Load and Preprocess the Titanic Dataset
+
+We load the Titanic dataset using Seaborn and preprocess it:
+
+1. Drop unnecessary columns such as `deck`, `embark_town`, and others.
+2. Encode categorical features like `sex` and `embarked`.
+3. Handle missing values by filling them with the median or mode.
+4. Drop rows with remaining missing values.
+
+#### Code Snippet:
+
+```python
+import pandas as pd
+from pycaret.classification import *
+
+def load_titanic_data():
+    import seaborn as sns
+    titanic = sns.load_dataset('titanic')
+
+    # Preprocess the data
+    titanic = titanic.drop(['deck', 'embark_town', 'alive', 'class', 'who', 'adult_male', 'alone'], axis=1)
+    
+    # Encode categorical variables
+    titanic['sex'] = titanic['sex'].map({'male': 0, 'female': 1})
+    titanic['embarked'] = titanic['embarked'].map({'C': 0, 'Q': 1, 'S': 2})
+
+    # Handle missing values
+    titanic['age'].fillna(titanic['age'].median(), inplace=True)
+    titanic['embarked'].fillna(titanic['embarked'].mode()[0], inplace=True)
+
+    # Drop rows with any remaining missing values
+    titanic.dropna(inplace=True)
+
+    return titanic
+
+# Load data
+data = load_titanic_data()
 ```
 
-## Results
+---
 
-The program compares 16 machine learning models and outputs their performance metrics. Below is a preview of the results:
+### Step 2: Set Up the PyCaret Classification Experiment
+
+We configure the PyCaret classification setup to automatically prepare the data and enable comparison of models.
+
+#### Code Snippet:
+
+```python
+# Set up PyCaret classification experiment
+target = 'survived'
+exp = setup(data=data, target=target, session_id=123, use_gpu=False)
+```
+
+---
+
+### Step 3: Compare Models
+
+We use PyCaret's `compare_models()` function to evaluate and rank 16 machine learning models. PyCaret automatically trains and evaluates models based on metrics like accuracy, F1-score, and AUC.
+
+#### Code Snippet:
+
+```python
+# Compare models and select the top 16
+results = compare_models(n_select=16)
+
+# Print the top models
+print("Top 16 Models:")
+print(results)
+```
+
+---
+
+### Step 4: Save the Experiment
+
+We save the PyCaret experiment for future reference or reloading.
+
+#### Code Snippet:
+
+```python
+# Save the experiment
+save_experiment('titanic_classification_experiment')
+```
+
+---
+
+## Example Output
+
+1. **Top 16 Models**: The output displays the ranked list of 16 machine learning models evaluated by PyCaret.
+
+   ```text
+   Top 16 Models:
+   [Logistic Regression, Random Forest, SVM, ...]
+   ```
+
+2. **Model Comparison Table**: PyCaret generates a table of metrics such as Accuracy, AUC, Recall, Precision, and F1-score for each model.
+
+3. **Experiment Saved**: The experiment is saved as `titanic_classification_experiment` for future reuse.
+
+---
+
+## Notes
+
+- PyCaret simplifies the comparison of multiple models, saving time on manual implementation.
+- The Titanic dataset is multi-feature and ideal for binary classification tasks.
+- Ensure PyCaret and Seaborn are installed before running the script:
+  ```bash
+  pip install pycaret seaborn pandas
+  ```
+
+---
+
+## Full Code
+
+```python
+import pandas as pd
+from pycaret.classification import *
+
+def load_titanic_data():
+    import seaborn as sns
+    titanic = sns.load_dataset('titanic')
+
+    # Preprocess the data
+    titanic = titanic.drop(['deck', 'embark_town', 'alive', 'class', 'who', 'adult_male', 'alone'], axis=1)
+
+    return titanic
+
+# Load and preprocess the Titanic data
+data = load_titanic_data()
+
+# Set up PyCaret classification experiment
+target = 'survived'
+exp = setup(data=data, target=target, session_id=123, use_gpu=False)
+
+# Compare models (PyCaret will automatically try multiple classification models)
+results = compare_models(n_select=16)
+
+# Print the top models
+print("Top 16 Models:")
+print(results)
+
+# Optionally save the results
+save_experiment('titanic_classification_experiment')
+    # Encode categorical variables
+    titanic['sex'] = titanic['sex'].map({'male': 0, 'female': 1})
+    titanic['embarked'] = titanic['embarked'].map({'C': 0, 'Q': 1, 'S': 2})
+
+    # Handle missing values
+    titanic['age'].fillna(titanic['age'].median(), inplace=True)
+    titanic['embarked'].fillna(titanic['embarked'].mode()[0], inplace=True)
+
+    # Drop rows with any remaining missing values
+    titanic.dropna(inplace=True)
+
+```
+
+---
+
+## Results
 
 ![image](https://github.com/user-attachments/assets/cadffded-f4a1-4014-b2cc-1ba65216be8f)
 
 
-## License
-
-This project is licensed under the MIT License. Feel free to use and modify the code.
-
-## Contributing
-
-If you would like to contribute, feel free to fork the repository and submit a pull request.
-
-
-# 4-2 HW4-2 對 model optimization using pycarat or optuna or other AutoML,meta-heuristic 1. Feature engineering, 2. model selection , 3 . training 超參數優化
-
-# Project Overview
-This project demonstrates the use of PyCaret and Optuna to optimize machine learning models. The workflow includes feature engineering, model selection, and hyperparameter optimization.
-
-## Key Steps
-1. **Feature Engineering**: Preprocess the Titanic dataset, including handling missing values, removing irrelevant columns, and encoding categorical variables.
-2. **Model Selection**: Use PyCaret to evaluate and select the best model from various classifiers.
-3. **Hyperparameter Optimization**: Use Optuna to fine-tune the selected model's parameters.
-
-## Results
-### Model Comparison
-Based on the PyCaret workflow, the top-performing models were:
-- **Extra Trees Classifier**
-  - Accuracy: 0.7031
-  - AUC: 0.7202
-  - F1 Score: 0.5389
-- **Light Gradient Boosting Machine**
-  - Accuracy: 0.7016
-  - AUC: 0.7316
-  - F1 Score: 0.5697
-- **Random Forest Classifier**
-  - Accuracy: 0.7015
-  - AUC: 0.7421
-  - F1 Score: 0.5662
-
-### Best Parameters from Optuna
-The optimized hyperparameters for the selected model were:
-- `max_depth`: 10
-- `n_estimators`: 60
-- `learning_rate`: 0.227
-- `subsample`: 0.829
-
-## Prerequisites
-### Required Python Libraries
-To run the code, ensure the following libraries are installed:
-
-```bash
-pip install pandas pycaret optuna scikit-learn
-```
-
-## Usage
-1. Clone the repository or download the script.
-2. Ensure the required libraries are installed.
-3. Run the script:
-
-```bash
-python script_name.py
-```
-
-4. The optimized model will be saved as `optimized_model.pkl`.
-
-## Notes
-- The `setup()` function in PyCaret is used for preprocessing and initializing the modeling environment.
-- Optuna is integrated with PyCaret's `tune_model` to perform efficient hyperparameter optimization.
-- The dataset used is the Titanic dataset, loaded directly from an online source.
-
-## Troubleshooting
-- Ensure all required libraries are installed.
-- If PyCaret or Optuna raises parameter-related errors, verify the parameter grid aligns with the selected model's supported parameters.
 
